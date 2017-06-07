@@ -4,6 +4,9 @@
  * @flow
  */
 
+import Account from './lib/Account.js'
+import SynchronizedAccount from './lib/SynchronizedAccount.js'
+
 import React, { Component } from 'react';
 import {
   AppRegistry,
@@ -23,22 +26,17 @@ export default class AccountManager extends Component {
     super(props);
     this.state = {view: 0, password: '', accounts: []};
   }
-  async _persistAccount(account, password){
-    try {
-      await AsyncStorage.setItem(account, password);
-    } catch (error) {
-      // Error saving data
-    }
-  }
   async _loadPersisted(){
+    //await AsyncStorage.clear();
+
     accounts = []
     await AsyncStorage.getAllKeys((err, keys) => {
       AsyncStorage.multiGet(keys, (err, stores) => {
-       stores.map((result, i, store) => {
+        stores.map((result, i, store) => {
           let key = store[i][0];
           let value = store[i][1];
 
-          accounts.push({account: key, password: value});
+          accounts.push(new Account("site", key, value, ''));
         });
       });
     });
@@ -46,10 +44,9 @@ export default class AccountManager extends Component {
     this.setState({accounts: accounts});
   }
   _addAccount(account, password){
-    accounts = this.state.accounts;
-    accounts.push({account: account, password: password});
-    this.setState({accounts: accounts});
-    this._persistAccount(account, password).done();
+    account = new Account("site", account, password);
+    sincro = new SynchronizedAccount(account, '');
+    sincro.persist().done();
   }
   _loadAccounts(password){
     this.setState({view: 1, password: password});
@@ -65,7 +62,7 @@ export default class AccountManager extends Component {
           this.state.view == 1 &&
           <View>
             <AccountForm submit={this._addAccount.bind(this)} />
-            <Accounts accounts={this.state.accounts} />
+            <AccountList accounts={this.state.accounts} />
           </View>
         }
       </View>
@@ -96,17 +93,17 @@ class SignIn extends Component {
   }
 }
 
-function Accounts(props) {
+function AccountList(props) {
   return (
     <FlatList
       data={props.accounts}
-      renderItem={({item}) => <Account data={item}/>}/>
+      renderItem={({item}) => <AccountItem data={item}/>}/>
   );
 }
 
-function Account(props){
+function AccountItem(props){
   return (
-    <Text>{props.data.account} - {props.data.password}</Text>
+    <Text>{props.data.site} => {props.data.user} - {props.data.password}</Text>
   )
 }
 
